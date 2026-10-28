@@ -1,0 +1,11 @@
+{
+  "name": "pitcrew",
+  "owner": { "name": "Tahir Majid" },
+  "plugins": [
+    {
+      "name": "session-mesh",
+      "source": "./plugins/session-mesh",
+      "description": "Coordinate several Claude Code sessions on one project: roles, peer messaging, presence band, locks, PR sign-off gates and ticket claims"
+    }
+  ]
+}

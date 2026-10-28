@@ -1,0 +1,39 @@
+[
+  {
+    "skills": [
+      "coordinating-sessions"
+    ],
+    "query": "You're the tester for checkout-v2. The implementer is in another session. Run the unit tests and tell them what fails.",
+    "files": [],
+    "expected_behavior": [
+      "Calls session-mesh:join with project checkout-v2 and role tester before anything else",
+      "Runs the tests without trying to fix failing code itself",
+      "Looks up checkout-v2-implementer with session-mesh:peers once and sends its uds: address a short HANDOFF; failure output longer than ~10 lines goes in a note (e.g. `.mesh/notes/` in the repo) and the message carries its path"
+    ]
+  },
+  {
+    "skills": [
+      "coordinating-sessions"
+    ],
+    "query": "Fix the typo in README.md",
+    "files": [],
+    "setup": "this session joined as reviewer; another session holds the worktree lease, so the Edit is denied with 'session-mesh: worktree ... is leased by app-implementer, its writer'",
+    "expected_behavior": [
+      "Does not retry the edit through Bash, sed or a different tool",
+      "Sends app-implementer the exact change via SendMessage, or offers a separate git worktree",
+      "Never runs or suggests running /mesh steal or /mesh off itself; asks the user if a lock must be lifted"
+    ]
+  },
+  {
+    "skills": [
+      "coordinating-sessions"
+    ],
+    "query": "You're the critic. Debate with the proposer session whether we should cache tokens in memory or in the keystore.",
+    "files": [],
+    "expected_behavior": [
+      "Joins with role critic, finds the proposer with session-mesh:peers, and messages its uds: address",
+      "Uses the DEBATE R<n> format with evidence and a premise check, under 300 words per message",
+      "Stops after at most three rounds and sends a five-line final position to the judge or user"
+    ]
+  }
+]
