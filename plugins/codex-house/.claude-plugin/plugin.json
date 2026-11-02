@@ -1,6 +1,6 @@
 {
   "name": "codex-house",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "House rules for delegating to OpenAI Codex through codex@codex-plugin: role presets as header lines, a handoff brief, a Result format, and the fallback when Codex fails",
   "author": { "name": "Tahir Majid" },
   "dependencies": ["codex"]

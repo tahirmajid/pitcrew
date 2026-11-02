@@ -33,6 +33,7 @@ Usage: `/mesh [status] | join <project> <level 0-3> [role] | claim <ticket> [wav
 
 House rules for handing work to OpenAI Codex from Claude Code. It runs on [SSS135/claude-code-codex-plugin](https://github.com/SSS135/claude-code-codex-plugin), which this marketplace lists unmodified as `codex`, pinned to a release tag. Installing `codex-house` installs it too.
 
+- **Skill `codex-routing`:** which work goes to Codex and which stays with Claude, by Claude's weekly use: under 60% Codex does review, second diagnosis and legwork; from 60% implementation too; from 75% most of the work, with Claude orchestrating and verifying. `usage-balance.py` prints the current tier; `statusline-limits.py` gives it Claude's numbers.
 - **Skill `delegate-to-codex`:** role presets (implementer, reviewer, runner, rescuer) as header lines on `codex:sol` / `codex:luna`, a `.handoff/<job>.md` brief template, the `## Result` format, how to verify and commit, and what to do when Codex fails.
 - **Hooks that warn, never block:**
   - at session start, a warning when another plugin named `codex` is installed, or the Codex CLI is missing or logged out;
