@@ -1,11 +1,27 @@
 {
   "name": "pitcrew",
-  "owner": { "name": "Tahir Majid" },
+  "owner": {
+    "name": "Tahir Majid"
+  },
   "plugins": [
+    {
+      "name": "codex",
+      "source": {
+        "source": "github",
+        "repo": "SSS135/claude-code-codex-plugin",
+        "ref": "v1.0.4"
+      },
+      "description": "Unmodified SSS135/claude-code-codex-plugin, pinned: Codex jobs as native background subagents (codex:luna, codex:sol, codex:astra, codex:terra)"
+    },
     {
       "name": "session-mesh",
       "source": "./plugins/session-mesh",
       "description": "Coordinate several Claude Code sessions on one project: roles, peer messaging, presence band, locks, PR sign-off gates and ticket claims"
+    },
+    {
+      "name": "codex-house",
+      "source": "./plugins/codex-house",
+      "description": "House rules for delegating to OpenAI Codex via codex@codex-plugin (SSS135): role presets, handoff brief, Result format, failure fallback"
     }
   ]
 }
