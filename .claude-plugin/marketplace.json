@@ -22,6 +22,11 @@
       "name": "codex-house",
       "source": "./plugins/codex-house",
       "description": "House rules for delegating to OpenAI Codex via codex@codex-plugin (SSS135): role presets, handoff brief, Result format, failure fallback"
+    },
+    {
+      "name": "linear-watch",
+      "source": "./plugins/linear-watch",
+      "description": "Watch Linear comments in a session with author and trigger guardrails"
     }
   ]
 }

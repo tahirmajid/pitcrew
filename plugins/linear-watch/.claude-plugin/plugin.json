@@ -1,0 +1,8 @@
+{
+  "name": "linear-watch",
+  "version": "0.1.0",
+  "description": "Session-scoped Linear comment channel with author and trigger guardrails",
+  "author": {
+    "name": "Tahir Majid"
+  }
+}
