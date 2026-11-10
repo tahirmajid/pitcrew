@@ -3,6 +3,7 @@ import type { Register } from 'claude-code'
 
 import type { Presence, View } from '../types'
 import { bashPaths, isGradle, isReadOnly, parseLocks, readyTarget, type ToolLock } from './bash'
+import { conflict, editDecision, live, refusal, release, relTo, type Claim } from './claims'
 import { activity } from './row'
 
 const view = atom({ plugin: 'session-mesh', key: 'view' } as const, { off: false, me: null, peers: [] } as View)
@@ -80,6 +81,72 @@ async function guard($: any, paths: string[]) {
       return `session-mesh: worktree ${t} is leased by ${holder(out)}, its writer. Send that session your change request with SendMessage, or work in a separate git worktree (git worktree add); if it is finished, ask the user to run: /mesh steal ${t}`
   }
   return undefined
+}
+
+const REPO_SH = 'd=$1; while [ -n "$d" ] && [ ! -d "$d" ]; do [ "$d" = "${d%/*}" ] && break; d=${d%/*}; done; t=$(git -C "$d" rev-parse --show-toplevel 2>/dev/null) || exit 0; c=$(git -C "$d" rev-parse --path-format=absolute --git-common-dir) || exit 0; (cd "$t" && pwd -P); (cd "$c" && pwd -P); (cd "$d" && pwd -P); echo "$d"'
+
+// the repo a path lives in: the git common dir every worktree shares, and the path relative to its worktree top
+async function repoOf($: any, path: string) {
+  const abs = path.startsWith('/') ? path : `${await $.session.cwd()}/${path}`
+  const [top, common, real, orig] = (await sh($, REPO_SH, abs)).stdout.split('\n')
+  if (!top || !common || !real || !orig) return undefined
+  const rel = relTo(top, real + abs.slice(orig.length))
+  return rel === undefined ? undefined : { common, rel }
+}
+
+const claimDir = (common: string) => `${root}/claims/${hash(common)}`
+
+// every claim in a repo: others' only while their session lives (same pid and start time the leases check)
+async function readClaims($: any, common: string) {
+  const all: Claim[] = (await sh($, 'cat "$1"/*.json 2>/dev/null', claimDir(common))).stdout.split('\n').filter(Boolean).flatMap((l: string) => { try { return [JSON.parse(l)] } catch { return [] } })
+  const others = all.filter(c => c.pid !== pid)
+  const ps = others.length ? (await $.process.run(['ps', '-o', 'pid=,lstart=', '-p', others.map(c => c.pid).join(',')])).stdout : ''
+  const alive = new Map<string, string>(ps.split('\n').filter(Boolean).map((l: string) => { const [p, ...r] = l.trim().split(/\s+/); return [p ?? '', r.join(' ')] as [string, string] }))
+  return { mine: all.find(c => c.pid === pid), others: live(others, alive) }
+}
+
+// ponytail: read-check-write is not atomic, so two sessions claiming one path in the same instant can both pass; a mkdir per path if that bites
+async function claimPaths($: any, common: string, paths: string[]) {
+  const me = (await read($, view)).me
+  if (!me?.project) return 'refused: join a project first'
+  const { mine, others } = await readClaims($, common)
+  const hit = conflict(others, me.project, paths)
+  if (hit) return refusal(hit)
+  const rec: Claim = { pid, lstart, project: me.project, address: address(me), paths: [...new Set([...(mine?.paths ?? []), ...paths])] }
+  await writeAtomic($, `${claimDir(common)}/${pid}.json`, JSON.stringify(rec))
+  return undefined
+}
+
+async function releasePaths($: any, paths?: string[]) {
+  if (!paths) { await sh($, 'rm -f "$1"/claims/*/"$2".json', root, pid); return 'released all path claims' }
+  const r = await repoOf($, await $.session.cwd())
+  if (!r) return 'refused: not in a git repo'
+  const { mine } = await readClaims($, r.common)
+  if (!mine) return 'no path claims to release'
+  const left = release(mine.paths, paths)
+  if (left.length) await writeAtomic($, `${claimDir(r.common)}/${pid}.json`, JSON.stringify({ ...mine, paths: left }))
+  else await $.process.run(['rm', '-f', `${claimDir(r.common)}/${pid}.json`])
+  return `released ${mine.paths.length - left.length} path claim(s)`
+}
+
+async function listClaims($: any) {
+  const r = await repoOf($, await $.session.cwd())
+  if (!r) return 'not in a git repo'
+  const { mine, others } = await readClaims($, r.common)
+  const rows = [...(mine ? [{ ...mine, address: `${mine.address} (you)` }] : []), ...others].map(c => `${c.address}: ${c.paths.join(', ')}`)
+  return rows.length ? rows.join('\n') : 'no path claims'
+}
+
+// Edit/Write/NotebookEdit: deny a file another live session claims, otherwise claim it for this one (level 0 only checks)
+async function pathGuard($: any, path: string) {
+  const me = (await read($, view)).me
+  if (!me?.project) return undefined
+  const r = await repoOf($, path)
+  if (!r) return undefined
+  const { others } = await readClaims($, r.common)
+  const d = editDecision(others, me.project, me.level ?? 0, r.rel)
+  if (d.claim) await claimPaths($, r.common, [r.rel])
+  return d.deny
 }
 
 let locks: ToolLock[] = []
@@ -208,7 +275,7 @@ async function command($: any, args: string, human: boolean) {
   if (verb === 'claim' && a) return claimTicket($, a, b)
   if (verb === 'signoff' && a && b) return signoff($, a, b)
   if (verb === 'unclaim') { claim = null; await sweep($); return 'ticket claim dropped' }
-  if (verb === 'release') { await lease($, 'x', 'release-all'); return 'released every lease this session held' }
+  if (verb === 'release') { await lease($, 'x', 'release-all'); await releasePaths($); return 'released every lease and path claim this session held' }
   if (verb === 'off') { await sh($, 'mkdir -p "$1" && : > "$1/OFF"', root); await sweep($); return 'MESH OFF: every guard passes until /mesh on' }
   if (verb === 'on') { await $.process.run(['rm', '-f', `${root}/OFF`]); await sweep($); return 'mesh on' }
   if (!verb || verb === 'status') return status($)
@@ -251,6 +318,24 @@ export const register: Register = on => {
       inputSchema: { type: 'object', properties: { pr: { type: 'string' }, ledger: { type: 'string' } }, required: ['pr', 'ledger'] },
       isDeferred: false,
     })
+    await $.tool.register({
+      name: 'claim_paths',
+      description: 'Claim repo-relative paths or globs (e.g. app/src/Foo.kt, feature/x/**) so no other session in this project edits them, in any worktree of this repo. Refused when a live session already claims an overlapping path; the refusal names it.',
+      inputSchema: { type: 'object', properties: { paths: { type: 'array', items: { type: 'string' } } }, required: ['paths'] },
+      isDeferred: false,
+    })
+    await $.tool.register({
+      name: 'release_paths',
+      description: "Release the given path claims, or all of this session's path claims when `paths` is omitted.",
+      inputSchema: { type: 'object', properties: { paths: { type: 'array', items: { type: 'string' } } } },
+      isDeferred: false,
+    })
+    await $.tool.register({
+      name: 'path_claims',
+      description: "List this repo's live path claims by session address.",
+      inputSchema: { type: 'object', properties: {} },
+      isDeferred: false,
+    })
     await $.command.register({ name: 'mesh', description: 'session-mesh: status, join, off/on', argumentHint: '[status | join <project> <level> [role] | claim <ticket> [wave] | unclaim | signoff <pr> <ledger> | release | steal <worktree> | off | on]' })
     await sweep($)
     $.clock.every(10000, () => { void sweep($).catch(() => undefined) })
@@ -279,6 +364,7 @@ export const register: Register = on => {
   on('session.end', async ($, e, next) => {
     if (e.reason !== 'clear' && e.reason !== 'resume') {
       await lease($, 'x', 'release-all')
+      await releasePaths($)
       await $.process.run(['rm', '-f', `${root}/sessions/${pid}.json`])
     }
     return next(e)
@@ -295,7 +381,7 @@ export const register: Register = on => {
     if (await isOff($)) return next(e)
     const input = e as unknown as { file_path?: string; notebook_path?: string }
     const path = input.file_path ?? input.notebook_path
-    const deny = path ? await guard($, [path]) : undefined
+    const deny = path ? (await guard($, [path])) ?? (await pathGuard($, path)) : undefined
     return deny ? { deny } : next(e)
   }).catch(($, e, next) => (next.called ? next(e) : { deny: 'session-mesh: guard failed closed (/mesh off to bypass)' }))
 
@@ -343,6 +429,21 @@ export const register: Register = on => {
     const p = e as unknown as { ticket: string; wave?: string }
     return { result: await claimTicket($, String(p.ticket), p.wave) }
   }).catch(($, e, next) => (next.called ? next(e) : { result: 'claim failed; ask the user for /mesh status' }))
+
+  on('tool.call', { tool: 'mcp__session-mesh__claim_paths' }, async ($, e) => {
+    const paths = ((e as unknown as { paths?: unknown[] }).paths ?? []).map(String).filter(Boolean)
+    const r = await repoOf($, await $.session.cwd())
+    if (!paths.length || !r) return { result: 'refused: give repo-relative paths from inside a git repo' }
+    return { result: (await claimPaths($, r.common, paths)) ?? `claimed ${paths.join(', ')}` }
+  }).catch(($, e, next) => (next.called ? next(e) : { result: 'claim_paths failed; ask the user for /mesh status' }))
+
+  on('tool.call', { tool: 'mcp__session-mesh__release_paths' }, async ($, e) => {
+    const paths = (e as unknown as { paths?: unknown[] }).paths?.map(String)
+    return { result: await releasePaths($, paths) }
+  }).catch(($, e, next) => (next.called ? next(e) : { result: 'release_paths failed' }))
+
+  on('tool.call', { tool: 'mcp__session-mesh__path_claims' }, async $ => ({ result: await listClaims($) }))
+    .catch(($, e, next) => (next.called ? next(e) : { result: 'path_claims failed' }))
 
   on('tool.call', { tool: 'mcp__session-mesh__signoff' }, async ($, e) => {
     const p = e as unknown as { pr: string; ledger: string }

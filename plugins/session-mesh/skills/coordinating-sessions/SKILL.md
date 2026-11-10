@@ -6,7 +6,7 @@ description: Coordinates several Claude Code sessions working on one project thr
 # Coordinating sessions
 
 The session-mesh mod gives each session a role inside a project and enforces locks. Messages travel through the
-built-in SendMessage tool. Mod tools: `session-mesh:join`, `peers`, `claim`, `signoff` (`mcp__session-mesh__<name>`).
+built-in SendMessage tool. Mod tools: `session-mesh:join`, `peers`, `claim`, `signoff`, `claim_paths`, `release_paths`, `path_claims` (`mcp__session-mesh__<name>`).
 
 ## Join first
 
@@ -101,6 +101,13 @@ Every turn re-reads the whole context, so cost = context size × turns. Measured
    go to an Explore subagent so only the conclusion lands in the role's context.
 
 ## Locks and denials
+
+## Path claims
+
+Several sessions may work in different worktrees of one repo, so edits are owned by path. The session that finds a bug
+fixes it: call `claim_paths` for the files it needs (an edit also claims its file), and `release_paths` when done.
+Never push work into another session's chat. When a path is claimed by another session, message that session to ask for
+a release, do not edit around it. See [locks.md](locks.md).
 
 A call denied with `session-mesh:` → see [locks.md](locks.md). Never retry the same call another way, and never run
 `/mesh steal` or `/mesh off` yourself: only the person types those.
