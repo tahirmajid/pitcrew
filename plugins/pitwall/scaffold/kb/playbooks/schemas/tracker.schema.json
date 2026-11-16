@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "playbooks/schemas/tracker.schema.json",
+  "title": "Project Tracker",
+  "description": "Tier-agnostic live state for a project (projects/<slug>/tracker.json). Required fields work for every tier; waves/retros/execution_strategy are OPTIONAL so adhoc/small/medium carry almost nothing. Machine-written by the /orchestrate run + learn flows. Pure data, no comments (it is rewritten on every role transition).",
+  "type": "object",
+  "required": ["project", "tier", "goal", "tickets"],
+  "additionalProperties": true,
+  "properties": {
+    "project": { "type": "string" },
+    "tier": { "enum": ["adhoc", "small", "medium", "large"] },
+    "goal": { "type": "string" },
+    "created": { "type": "string", "description": "ISO date, YYYY-MM-DD" },
+    "repo": { "type": ["string", "null"] },
+    "base_branch": { "type": "string", "default": "main" },
+    "project_url": { "type": ["string", "null"] },
+    "next_action": { "type": "string", "description": "The single resume sentence: what to do next." },
+
+    "integrations": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "linear": { "type": "boolean" },
+        "github": { "type": "boolean" },
+        "ci": { "type": "boolean" },
+        "workflow_tool": { "type": "boolean" }
+      }
+    },
+
+    "references": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Pointers to the roles dir, this project's anti-patterns.md, analysis docs, etc."
+    },
+
+    "execution_strategy": {
+      "type": "object",
+      "description": "LARGE tier only. How batches run.",
+      "additionalProperties": true,
+      "properties": {
+        "model": { "type": "string" },
+        "batch_size": { "type": "integer", "minimum": 1 },
+        "rule": { "type": "string" }
+      }
+    },
+
+    "waves": {
+      "type": "object",
+      "description": "LARGE tier only. Keyed by wave id (W1, W2, ...).",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" },
+          "status": { "enum": ["not_started", "in_progress", "complete"] },
+          "total_tickets": { "type": "integer" },
+          "merged": { "type": "integer" },
+          "open_prs": { "type": "integer" }
+        }
+      }
+    },
+
+    "wave_retros": {
+      "type": "object",
+      "description": "LARGE tier only. Output of /orchestrate learn retro per wave.",
+      "additionalProperties": { "type": "object" }
+    },
+
+    "active_prs": {
+      "type": "array",
+      "description": "LARGE tier only. Live PRs being watched.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ticket": { "type": "string" },
+          "pr_url": { "type": "string" },
+          "ci_status": { "type": "string" },
+          "status": { "type": "string" }
+        }
+      }
+    },
+
+    "tickets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string", "description": "Issue-tracker id, GitHub issue, or a local slug for tool-less projects." },
+          "title": { "type": "string" },
+          "status": { "enum": ["todo", "in_progress", "local_green", "in_review", "merged", "done", "blocked"] },
+          "blocked_by": { "type": "array", "items": { "type": "string" } },
+          "blocks": { "type": "array", "items": { "type": "string" } },
+          "branch": { "type": ["string", "null"] },
+          "pr_url": { "type": ["string", "null"] },
+          "manifest": { "type": ["string", "null"], "description": "Path to the durable plan written by the Planner, e.g. ./prompts/<id>.manifest.md (medium/large). Its frontmatter status walks draft -> approved -> executed." },
+          "role_status": {
+            "type": "object",
+            "description": "Which roles are done. Keys depend on the tier's role set (adhoc: doer; small: implementer/tester; medium: +planner/updater; large: +reviewer).",
+            "additionalProperties": { "enum": ["pending", "in_progress", "done", "blocked"] }
+          },
+
+          "wave": { "type": ["string", "null"], "description": "LARGE only." },
+          "target_modules": { "type": "array", "items": { "type": "string" } },
+          "pr_review": {
+            "type": "object",
+            "description": "LARGE only.",
+            "properties": {
+              "ready": { "type": "boolean" },
+              "criticals": { "type": "integer" },
+              "majors": { "type": "integer" },
+              "bot_comments_open": { "type": "integer" }
+            }
+          },
+          "lessons": { "type": "array", "items": { "type": "string" } },
+          "work_type": { "type": ["string", "null"] },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "policies": { "type": "array", "items": { "type": "string" } }
+  }
+}

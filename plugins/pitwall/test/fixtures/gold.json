@@ -1,0 +1,8 @@
+[
+  {"id": "q1", "query": "how long should I steep cold brew", "style": "natural", "expects_source_paths": ["coffee-brewing.md"]},
+  {"id": "q2", "query": "RETRY_BACKOFF_MS", "style": "identifier", "expects_source_paths": ["retry-policy.md"]},
+  {"id": "q3", "query": "feeding interval of sourdough at 30 C", "style": "natural", "expects_source_paths": ["sourdough-starter.md"]},
+  {"id": "q4", "query": "what to pack for hut to hut hiking", "style": "natural", "expects_source_paths": ["hiking-trip.md"]},
+  {"id": "q5", "query": "what to do when the queue depth alarm fires", "style": "natural", "expects_source_paths": ["projects/orbit/runbook.md"]},
+  {"id": "q6", "query": "thumbnail service and CDN for galleries", "style": "natural", "expects_source_paths": ["projects/lumen/architecture.md"]}
+]

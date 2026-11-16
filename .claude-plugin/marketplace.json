@@ -27,6 +27,11 @@
       "name": "linear-watch",
       "source": "./plugins/linear-watch",
       "description": "Watch Linear comments in a session with author and trigger guardrails"
+    },
+    {
+      "name": "pitwall",
+      "source": "./plugins/pitwall",
+      "description": "Local Markdown knowledge base for agents: hybrid search, linked projects and resources, review ledger, orchestration skill"
     }
   ]
 }

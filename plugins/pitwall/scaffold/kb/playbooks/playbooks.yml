@@ -1,0 +1,31 @@
+# playbooks.yml — GLOBAL config for the orchestration layer.
+# Read once by /orchestrate at startup. Per-project project.yml always overrides these.
+# All paths are relative to the knowledge base root.
+
+version: 1
+
+# Default tier applied by `/orchestrate init` when --tier is omitted.
+default_tier: small
+
+# Shared, authored-once assets.
+paths:
+  tiers: playbooks/tiers/tiers.yml
+  roles: playbooks/roles
+  schemas: playbooks/schemas
+  global_anti_patterns: playbooks/learning/GLOBAL-anti-patterns.md
+  project_template: playbooks/templates/project
+  templates: playbooks/templates
+  projects: projects
+  archive: archive
+
+# Default integration posture for NEW projects. Tool-agnostic by design: everything off
+# except local git, so a brand-new project works end-to-end with zero external services.
+# `init` turns these on per tier (e.g. large enables ci/workflow_tool/bots).
+integration_defaults:
+  linear:        { enabled: false }
+  github:        { enabled: true }
+  ci:            { enabled: false }
+  workflow_tool: { enabled: false }
+  bots:          { enabled: false }
+
+# Indexing is automatic. Generated output under runs/ and logs/ is excluded by .pitwall/ignore.

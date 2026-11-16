@@ -51,6 +51,22 @@ codex login                                    # once, if Codex isn't logged in
 
 Add your own rules (routing, budgets, team conventions) as a separate personal skill that tells Claude to load `codex-house:delegate-to-codex` first.
 
+### pitwall
+
+A local, Markdown-first knowledge base for agents. Point it at a folder of notes and it serves search, projects and linked tickets, threads, docs and PRs over MCP. Everything runs on your machine.
+
+- **Search:** hybrid BM25 and vector search over Markdown-aware chunks, boosted toward the current project, with optional graph expansion from shared ticket ids and links.
+- **Projects and resources:** `projects/<slug>/project.yml` ties repos, tiers and linked resources together. Links are stored, never fetched.
+- **Review ledger:** records findings and what was done with each; `review_codex_run` can run the Codex CLI on a diff.
+- **Skills included:** `pitwall` covers how an agent uses the knowledge base. `orchestrate` drives projects with the right amount of process for their tier.
+- **Hook:** at session start it reminds the agent to recall before answering from memory.
+
+```
+claude plugin install pitwall@pitcrew      # asks for the knowledge base folder
+```
+
+**Requirements:** Node >= 22.13. The first start downloads a ~35 MB embedding model and builds the index. See `plugins/pitwall/README.md`.
+
 ## License
 
 MIT

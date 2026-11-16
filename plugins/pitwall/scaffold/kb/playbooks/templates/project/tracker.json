@@ -1,0 +1,18 @@
+{
+  "project": "<<PROJECT_SLUG>>",
+  "tier": "<<TIER>>",
+  "goal": "<<ONE_LINE_GOAL>>",
+  "created": "<<YYYY-MM-DD>>",
+  "repo": "<<REPO_OR_NULL>>",
+  "base_branch": "main",
+  "project_url": null,
+  "integrations": { "linear": false, "github": true, "ci": false, "workflow_tool": false },
+  "references": {
+    "roles": "../../playbooks/roles",
+    "anti_patterns": "./anti-patterns.md",
+    "global_anti_patterns": "../../playbooks/learning/GLOBAL-anti-patterns.md"
+  },
+  "next_action": "No tickets yet. Add the first ticket and run /orchestrate run.",
+  "tickets": [],
+  "policies": []
+}

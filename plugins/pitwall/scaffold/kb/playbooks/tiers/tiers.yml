@@ -1,0 +1,84 @@
+# tiers.yml — THE DIAL
+#
+# This is the single lookup table the /orchestrate skill reads to decide how much
+# ceremony a project gets. A project's `project.yml` sets ONE field — `tier` — and the
+# engine resolves everything below from here. Re-tiering a project = changing that one
+# field; because each tier is a strict subset of the next, promotion never needs a rewrite.
+#
+# Platform-independence: nothing here names a language, build tool, or framework.
+# Gates reference ABSTRACT command names (build / test / lint / format) that each project
+# binds to real commands in its own project.yml `commands:` block.
+
+version: 1
+
+# Ordered low -> high. Promotion is monotonic: medium has everything small has, plus more.
+ladder: [adhoc, small, medium, large]
+
+tiers:
+
+  adhoc:
+    summary: "A single quick task or fix. No project folder, no tracking ceremony."
+    when: "One-off change you could describe in a sentence. No coordination needed."
+    roles: [doer]                 # one collapsed Do+Verify role, runs inline
+    execution: inline             # no worktree, no batches
+    state_artifact: none          # optionally a checklist.md; usually nothing
+    gates:
+      local_green: [test]         # 'does it still run / does the test pass'
+      batch_gate: false
+      require_peer_approval: false
+    learning: off                 # at most an inline lesson note
+    pr_strategy: optional         # may be a local commit or no PR at all
+    resume_doc: none
+
+  small:
+    summary: "1-3 related tasks. Lightweight checklist, single PR."
+    when: "A small feature or fix that has a couple of steps but no real dependency graph."
+    roles: [implementer, tester]
+    execution: single             # optional worktree; one task at a time
+    state_artifact: checklist     # checklist.md IS the state and the handoff
+    gates:
+      local_green: [build, test]
+      batch_gate: false
+      require_peer_approval: false
+    learning: off                 # optional one-liner appended to global lib
+    pr_strategy: single_pr        # one PR, base = base_branch
+    resume_doc: none
+
+  medium:
+    summary: "One feature, ~4-15 tasks. Full role pipeline, flat tracker, status board."
+    when: "A feature with several tickets that mostly proceed in order, no parallel waves."
+    roles: [planner, implementer, tester, updater]
+    execution: serial             # tickets run one after another, each its own worktree
+    state_artifact: tracker       # tracker.json with a FLAT ticket list (no waves{})
+    gates:
+      local_green: [lint, build, test]
+      batch_gate: false
+      require_peer_approval: false
+    learning: per_project         # capture lessons to per-project anti-patterns; no auto-promote
+    pr_strategy: one_pr_per_ticket # serial merge, base = base_branch
+    resume_doc: status            # STATUS.md live board
+
+  large:
+    summary: "A program: 15+ tasks, multi-wave, parallel batches."
+    when: "Big multi-wave effort with a real dependency graph, CI, peer review, and a learning loop."
+    roles: [planner, implementer, tester, updater, reviewer]
+    execution: parallel_batches   # master->worker, batch_size cap, stacked PRs + cascade
+    state_artifact: tracker_waves # tracker.json WITH waves{} + wave_retros{} + active_prs[]
+    gates:
+      local_green: [lint, build, test]
+      batch_gate: true            # next batch only when every PR in current batch is CI-green
+      require_peer_approval: true # no merge without a human approval
+    learning: full                # capture -> retro -> promote (>=3 OR critical) -> inject into prompts
+    pr_strategy: stacked          # stacked PRs on blocking branches; cascade rebase on parent change
+    resume_doc: status_and_resume # STATUS.md + RESUME.md handoff snapshot
+    defaults:
+      batch_size: 3               # never run more than N tickets concurrently
+
+# Ticket status vocabulary shared by all tiers (tracker.json + checklist semantics).
+ticket_statuses: [todo, in_progress, local_green, in_review, merged, done, blocked]
+
+# Role status vocabulary (what each role records in tracker.ticket.role_status).
+role_statuses: [pending, in_progress, done, blocked]
+
+# Project lifecycle (project.yml `status`). Closed projects move to archive/.
+project_statuses: [active, paused, closed]

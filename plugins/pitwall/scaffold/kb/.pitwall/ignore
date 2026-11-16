@@ -1,0 +1,8 @@
+runs/
+logs/
+*.log
+__pycache__/
+*.bak
+*.zip
+.DS_Store
+node_modules/

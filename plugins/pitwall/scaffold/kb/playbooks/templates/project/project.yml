@@ -1,0 +1,75 @@
+# project.yml — profile for a single project. Copied by `/orchestrate init` into
+# projects/<slug>/ and filled in. Validated by ../../playbooks/schemas/project.schema.json.
+# Minimal required fields: name, tier, goal, commands. Everything else is filled from
+# playbooks/tiers/tiers.yml for the chosen tier.
+#
+# THIS FILE is where all stack/platform specifics live. The shared playbooks stay neutral by
+# referencing the abstract command names you bind below.
+
+name: <<PROJECT_SLUG>>
+tier: <<TIER>>                       # adhoc | small | medium | large  (the dial)
+status: active                       # active | paused | closed (closed projects move to archive/)
+goal: "<<ONE_LINE_GOAL>>"
+created: <<YYYY-MM-DD>>
+base_branch: main
+project_url: null
+
+# Repositories this project works in (absolute paths). The first one is the primary repo.
+repos: []
+#  - /path/to/your/repo
+#  - /path/to/a/second/repo
+# repo: /path/to/your/repo           # single-repo alias for `repos`, still accepted
+
+# Repo-relative prefixes this project owns — only needed when several projects share one repo.
+# subdirs:
+#   - services/billing/
+#   - docs/billing/
+
+# Extra knowledge-base folders (relative to the knowledge base root) that belong to this project.
+# folders:
+#   - reference/billing-domain
+
+# Linked tickets, chat threads, docs, PRs. Only `url` is required.
+# resources:
+#   - url: https://tracker.example.com/issue/PROJ-1
+#     kind: ticket
+#     title: Epic
+#   - url: https://chat.example.com/archives/C000/p000
+#     kind: thread
+#     note: Kickoff discussion
+#   - url: https://git.example.com/org/repo/pull/1
+#     kind: pr
+#     ticket: PROJ-2
+
+# STACK BINDING — map abstract gate names to this project's real commands.
+# Leave a value as "" if the project has no such step (e.g. no linter).
+commands:
+  build:  "<<BUILD_CMD>>"            # e.g. make build | npm run build | cargo build
+  test:   "<<TEST_CMD>>"             # e.g. make test | npm test | pytest
+  lint:   "<<LINT_CMD>>"             # e.g. npm run lint | ruff check . | rubocop  (or "")
+  format: "<<FORMAT_CMD>>"           # e.g. npm run format | ruff format . | gofmt -w .  (or "")
+
+# Every external call in a playbook is guarded by `enabled`. Off => fully local.
+integrations:
+  linear:        { enabled: false }   # issue tracker
+  github:        { enabled: true }
+  ci:            { enabled: false, trigger: "comment:run-ci" }
+  workflow_tool: { enabled: false }   # parallel batches: large only
+  bots:          { enabled: false }
+
+# The following blocks are FILLED FROM tiers.yml at init time for the chosen tier.
+# They are written out explicitly so you can override per project.
+pipeline:
+  roles: []                          # e.g. [implementer, tester] for small
+gates:
+  local_green: []                    # e.g. [build, test]
+  batch_gate: false
+  require_peer_approval: false
+state:
+  tracker: ./tracker.json            # small/adhoc may use ./checklist.md instead
+  status_board: null                 # ./STATUS.md for medium/large
+  resume_doc: null                   # ./RESUME.md for large
+learning:
+  per_project_anti_patterns: ./anti-patterns.md
+  inherits_global: true
+  auto_promote: false                # true for large

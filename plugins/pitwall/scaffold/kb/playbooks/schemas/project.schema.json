@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "playbooks/schemas/project.schema.json",
+  "title": "Project Profile (project.yml)",
+  "description": "Human-authored profile for one project at projects/<slug>/project.yml. Sets the tier (the dial) plus stack-specific bindings. A minimal profile need only set name, tier, goal, and commands; everything else is filled from tiers.yml. This is where ALL platform specifics live so the shared playbooks stay stack-neutral.",
+  "type": "object",
+  "required": ["name", "tier", "goal", "commands"],
+  "additionalProperties": true,
+  "properties": {
+    "name": { "type": "string", "description": "kebab-case project slug; also the folder name under projects/." },
+    "tier": { "enum": ["adhoc", "small", "medium", "large"] },
+    "status": { "enum": ["active", "paused", "closed"], "default": "active", "description": "Project lifecycle. A closed project's folder moves to archive/." },
+    "goal": { "type": "string" },
+    "created": { "type": "string", "description": "ISO date, YYYY-MM-DD." },
+    "repos": {
+      "type": "array",
+      "description": "Absolute paths of the repositories this project works in. The first entry is the primary repo.",
+      "items": { "type": "string" }
+    },
+    "repo": { "type": ["string", "null"], "description": "Single-repo alias for `repos: [<path>]`. Accepted for backwards compatibility; prefer `repos`." },
+    "subdirs": {
+      "type": "array",
+      "description": "Repo-relative path prefixes this project owns. Use when several projects share one repo.",
+      "items": { "type": "string" }
+    },
+    "folders": {
+      "type": "array",
+      "description": "Extra knowledge-base folders (relative to the knowledge base root) that belong to this project besides projects/<slug>/.",
+      "items": { "type": "string" }
+    },
+    "resources": {
+      "type": "array",
+      "description": "Linked external resources: tickets, chat threads, docs, PRs, dashboards.",
+      "items": {
+        "type": "object",
+        "required": ["url"],
+        "additionalProperties": false,
+        "properties": {
+          "url": { "type": "string" },
+          "kind": { "type": "string", "description": "Free tag, e.g. ticket, thread, doc, pr, dashboard." },
+          "title": { "type": "string" },
+          "note": { "type": "string" },
+          "ticket": { "type": "string", "description": "Ticket id this resource relates to, if any." }
+        }
+      }
+    },
+    "base_branch": { "type": "string", "default": "main" },
+    "project_url": { "type": ["string", "null"] },
+
+    "commands": {
+      "type": "object",
+      "description": "STACK BINDING. Abstract gate names -> real shell commands. Playbooks reference these names, never a tool. Leave a value empty/null if the project has no such step.",
+      "additionalProperties": true,
+      "properties": {
+        "build": { "type": ["string", "null"] },
+        "test": { "type": ["string", "null"] },
+        "lint": { "type": ["string", "null"] },
+        "format": { "type": ["string", "null"] }
+      }
+    },
+
+    "integrations": {
+      "type": "object",
+      "description": "Every external tool call in a playbook is guarded by `enabled`. Off by default -> the project works fully local with no hosted git, issue tracker, or CI.",
+      "additionalProperties": true,
+      "properties": {
+        "linear": { "type": "object", "description": "Issue-tracker integration.", "properties": { "enabled": { "type": "boolean" }, "team": { "type": "string" } } },
+        "github": { "type": "object", "properties": { "enabled": { "type": "boolean" } } },
+        "ci": { "type": "object", "properties": { "enabled": { "type": "boolean" }, "trigger": { "type": "string" } } },
+        "workflow_tool": { "type": "object", "properties": { "enabled": { "type": "boolean" } } },
+        "bots": { "type": "object", "properties": { "enabled": { "type": "boolean" } } }
+      }
+    },
+
+    "pipeline": {
+      "type": "object",
+      "description": "Defaults come from the tier; override here only to deviate.",
+      "properties": {
+        "roles": { "type": "array", "items": { "enum": ["doer", "planner", "implementer", "tester", "updater", "reviewer"] } }
+      }
+    },
+
+    "gates": {
+      "type": "object",
+      "properties": {
+        "local_green": { "type": "array", "items": { "enum": ["build", "test", "lint", "format"] } },
+        "batch_gate": { "type": "boolean" },
+        "require_peer_approval": { "type": "boolean" }
+      }
+    },
+
+    "state": {
+      "type": "object",
+      "properties": {
+        "tracker": { "type": ["string", "null"], "description": "Path to tracker.json or checklist.md, relative to the project folder. May point at an externally kept tracker." },
+        "status_board": { "type": ["string", "null"] },
+        "resume_doc": { "type": ["string", "null"] }
+      }
+    },
+
+    "learning": {
+      "type": "object",
+      "properties": {
+        "per_project_anti_patterns": { "type": ["string", "null"] },
+        "inherits_global": { "type": "boolean" },
+        "auto_promote": { "type": "boolean" }
+      }
+    },
+
+    "owns_skills": {
+      "type": "array",
+      "description": "Optional. If a project hosts its own specialized skills/workflows, list them so /orchestrate defers to them instead of driving the generic pipeline.",
+      "items": { "type": "string" }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "pitwall",
+  "version": "0.1.0",
+  "description": "A local, Markdown-first knowledge base for agents: hybrid search, linked projects and resources, a review ledger and an orchestration skill",
+  "author": {
+    "name": "Tahir Majid"
+  },
+  "userConfig": {
+    "kb_dir": {
+      "type": "directory",
+      "title": "Knowledge base folder",
+      "description": "Folder of Markdown notes that pitwall indexes and serves. Run init_kb once to fill an empty folder with the starter layout.",
+      "required": true
+    }
+  }
+}
