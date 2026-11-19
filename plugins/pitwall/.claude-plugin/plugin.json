@@ -11,6 +11,12 @@
       "title": "Knowledge base folder",
       "description": "Folder of Markdown notes that pitwall indexes and serves. Run init_kb once to fill an empty folder with the starter layout.",
       "required": true
+    },
+    "server_url": {
+      "type": "string",
+      "title": "Shared server URL",
+      "description": "Optional. URL of a running pitwall daemon, for example http://127.0.0.1:8765/mcp. Sessions then share one process instead of starting their own.",
+      "required": false
     }
   }
 }

@@ -1,55 +1,22 @@
 #!/usr/bin/env node
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { fileURLToPath } from 'node:url';
-import { loadConfig } from './config.js';
-import { openDb } from './db.js';
-import { createEmbedder, createReranker } from './embeddings.js';
-import { createIndexer } from './indexer.js';
-import { createVectorCache, createSearcher } from './search.js';
-import { SCAFFOLD_DIR } from './scaffold.js';
-import { registerFileTools } from './tools-files.js';
-import { registerKnowledgeTools } from './tools-knowledge.js';
-import { registerReviewTools } from './tools-review.js';
+import { envVal } from './config.js';
 
-const INSTRUCTIONS = 'Pitwall: knowledge base over a folder of notes, indexed automatically. '
-  + 'recall (compact=true for one line per hit) or semantic_search first; hits give path:lines, then read_file with offset/limit. '
-  + 'related_knowledge follows tickets, identifiers and links. search_in_files is exact text. add_note and bookmark_url save Markdown. '
-  + 'Projects live in projects/<slug>/project.yml (link_project); link_resource attaches URLs to a project or ticket. review_* tools keep a review ledger.';
+const url = envVal(process.env, 'PITWALL_URL');
+const port = envVal(process.env, 'PITWALL_HTTP_PORT');
 
-let cfg;
-try { cfg = loadConfig(); if (cfg.notice) console.error(`pitwall: ${cfg.notice}`); } catch (e) { console.error(`pitwall: ${e.message}`); process.exit(1); }
+// Proxy mode must not load the heavy modules, so everything below is a dynamic import.
+const proxied = url && await (await import('./proxy.js')).runProxy(url, process.env.PITWALL_PROJECT_DIR || process.env.CLAUDE_PROJECT_DIR || process.cwd());
+if (url && !proxied) console.error(`pitwall: shared server at ${url} unreachable, running in-process`);
 
-const embedder = createEmbedder(cfg.embedModel);
-const reranker = createReranker();
-const db = openDb({ base: cfg.base, dbPath: cfg.dbPath, embedModel: cfg.embedModel });
-const indexer = createIndexer({ db, base: cfg.base, embedDocs: embedder.embedDocs });
-const cache = createVectorCache(db);
-const searcher = createSearcher({ db, cache, embedQuery: embedder.embedQuery, rerankScore: reranker.score, graph: cfg.graph });
-
-const server = new McpServer({ name: 'pitwall', version: '5.0.0' }, { instructions: INSTRUCTIONS });
-
-let projectDir;
-const ctx = {
-  scaffoldDir: SCAFFOLD_DIR,
-  base: cfg.base, cfg, db, indexer, searcher, cache, embedder,
-  /** Session working dir: PITWALL_PROJECT_DIR, CLAUDE_PROJECT_DIR, first MCP root, then cwd. */
-  async projectDir() {
-    if (projectDir) return projectDir;
-    projectDir = cfg.projectDir || process.env.CLAUDE_PROJECT_DIR;
-    if (!projectDir && server.server.getClientCapabilities()?.roots) {
-      try {
-        const { roots } = await server.server.listRoots();
-        if (roots[0]?.uri.startsWith('file:')) projectDir = fileURLToPath(roots[0].uri);
-      } catch { /* client refused */ }
-    }
-    return (projectDir ||= process.cwd());
-  },
-};
-
-registerFileTools(server, ctx);
-registerKnowledgeTools(server, ctx);
-registerReviewTools(server, ctx);
-
-await server.connect(new StdioServerTransport());
-indexer.reconcile().catch(e => console.error(`pitwall: reconcile failed: ${e.message}`));
+if (!proxied) {
+  const { buildShared, createSessionServer } = await import('./server.js');
+  const shared = buildShared();
+  const reconcile = () => shared.indexer.reconcile().catch(e => console.error(`pitwall: reconcile failed: ${e.message}`));
+  if (port) {
+    await (await import('./http.js')).serveHttp(shared, createSessionServer, Number(port));
+  } else {
+    const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js');
+    await createSessionServer(shared, { projectDir: shared.cfg.projectDir || process.env.CLAUDE_PROJECT_DIR }).connect(new StdioServerTransport());
+  }
+  reconcile();
+}

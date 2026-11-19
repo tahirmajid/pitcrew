@@ -5,9 +5,12 @@ export const DEFAULT_GRAPH = false;
 
 const NOT_CONFIGURED = 'knowledge base folder is not configured: set the plugin option kb_dir (or the PITWALL_BASE_DIR environment variable) to the folder that holds your notes';
 
+/** An env value, or undefined when it is unset, blank or an unexpanded `${...}` placeholder. */
+export const envVal = (env, k) => { const v = env[k] ?? ''; return v.trim() && !/^\$\{.*\}$/.test(v.trim()) ? v : undefined; };
+
 /** Reads and validates the PITWALL_* environment; throws a readable Error on bad input. */
 export function loadConfig(env = process.env) {
-  const val = k => { const v = env[k] ?? ''; return v.trim() && !/^\$\{.*\}$/.test(v.trim()) ? v : undefined; };
+  const val = k => envVal(env, k);
   if (!val('PITWALL_BASE_DIR')) throw new Error(NOT_CONFIGURED);
   const base = path.resolve(val('PITWALL_BASE_DIR'));
   if (!fs.existsSync(base) || !fs.statSync(base).isDirectory()) throw new Error(`PITWALL_BASE_DIR does not exist or is not a directory: ${base}`);

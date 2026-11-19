@@ -61,6 +61,40 @@ The plugin sets `PITWALL_BASE_DIR` and `PITWALL_PROJECT_DIR` itself. The `Sessio
 
 An unset, empty or unexpanded value for `PITWALL_BASE_DIR` makes the server print how to configure the folder and exit. If an older `<base>/knowledge.db` exists and `.pitwall/index.db` does not, it is opened in place so an existing review ledger keeps working. Changing the model or the chunker rebuilds the index.
 
+## Shared server
+
+By default every session starts its own pitwall process, which loads its own embedding model. To run one process for all sessions, start a daemon and point sessions at it.
+
+| Variable | Meaning |
+|---|---|
+| `PITWALL_HTTP_PORT` | Serve MCP over HTTP on `127.0.0.1:<port>/mcp` instead of stdio. Loopback only; requests with a foreign `Host` or `Origin` are rejected. |
+| `PITWALL_URL` | Run as a thin stdio proxy to that daemon URL (the plugin option `server_url`). Sends the session's project dir to it. If the daemon is unreachable, it prints a notice and runs in-process. |
+
+```
+PITWALL_BASE_DIR=/path/to/notes PITWALL_HTTP_PORT=8765 node /path/to/pitwall/src/index.js
+```
+
+The daemon exposes the file-write tools to anything that can reach the port, so keep it on loopback. A macOS launchd job at `~/Library/LaunchAgents/com.example.pitwall.plist` keeps it running:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.example.pitwall</string>
+  <key>ProgramArguments</key><array>
+    <string>/path/to/node</string><string>/path/to/pitwall/src/index.js</string>
+  </array>
+  <key>EnvironmentVariables</key><dict>
+    <key>PITWALL_BASE_DIR</key><string>/path/to/notes</string>
+    <key>PITWALL_HTTP_PORT</key><string>8765</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
+```
+
+Load it with `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.example.pitwall.plist`.
+
 ## Privacy
 
 Everything runs on your machine: notes, index, embedding model and search. The model is downloaded once. The only tool that sends anything out is `review_codex_run`, through the Codex CLI you have installed. The index lives in `.pitwall/`; `init_kb` adds a `.gitignore` there so it is not committed if the folder is a git repo.

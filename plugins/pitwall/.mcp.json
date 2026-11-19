@@ -5,7 +5,8 @@
       "args": ["${CLAUDE_PLUGIN_ROOT}/src/index.js"],
       "env": {
         "PITWALL_BASE_DIR": "${user_config.kb_dir}",
-        "PITWALL_PROJECT_DIR": "${CLAUDE_PROJECT_DIR}"
+        "PITWALL_PROJECT_DIR": "${CLAUDE_PROJECT_DIR}",
+        "PITWALL_URL": "${user_config.server_url}"
       }
     }
   }
