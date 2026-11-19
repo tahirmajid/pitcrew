@@ -1,6 +1,6 @@
 {
   "name": "pitwall",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A local, Markdown-first knowledge base for agents: hybrid search, linked projects and resources, a review ledger and an orchestration skill",
   "author": {
     "name": "Tahir Majid"
