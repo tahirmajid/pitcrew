@@ -11,6 +11,12 @@ export function serveHttp(shared, createSessionServer, port) {
   const sweep = setInterval(() => {
     for (const [id, t] of sessions) if (Date.now() - lastSeen.get(id) > idleMs) { console.error(`pitwall: session ${id} expired`); t.close(); }
   }, Math.min(idleMs / 2, 60000)).unref();
+  const maxRss = Number(process.env.PITWALL_MAX_RSS_MB) * 1048576;
+  // Exits so a supervisor (launchd, systemd) restarts it; proxies reconnect on their next call.
+  // ponytail: resident memory only, compressed or swapped pages are not counted.
+  if (maxRss) setInterval(() => {
+    if (process.memoryUsage.rss() > maxRss) { console.error(`pitwall: over PITWALL_MAX_RSS_MB, exiting`); process.exit(1); }
+  }, 30000).unref();
   const send = (res, code, message) => res.writeHead(code, { 'content-type': 'application/json' }).end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message }, id: null }));
   const httpServer = http.createServer(async (req, res) => {
     try {

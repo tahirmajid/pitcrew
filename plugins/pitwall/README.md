@@ -69,6 +69,7 @@ By default every session starts its own pitwall process, which loads its own emb
 |---|---|
 | `PITWALL_HTTP_PORT` | Serve MCP over HTTP on `127.0.0.1:<port>/mcp` instead of stdio. Loopback only; requests with a foreign `Host` or `Origin` are rejected. |
 | `PITWALL_SESSION_IDLE_MS` | Daemon drops sessions idle this long (default 3600000); a live proxy reconnects on its next call. |
+| `PITWALL_MAX_RSS_MB` | Daemon exits when its resident memory passes this many MB, so a supervisor can restart it. Off by default. |
 | `PITWALL_URL` | Run as a thin stdio proxy to that daemon URL (the plugin option `server_url`). Sends the session's project dir to it. If the daemon is unreachable, it prints a notice and runs in-process. |
 
 ```
