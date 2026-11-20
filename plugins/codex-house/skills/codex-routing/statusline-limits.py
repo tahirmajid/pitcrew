@@ -5,6 +5,15 @@ data = json.load(sys.stdin)
 cache = os.path.expanduser("~/.claude/claude-limits.json")
 limits = data.get("rate_limits")
 if limits:
+    # Every session writes this file with its own last-seen numbers, so keep the higher use within one window.
+    try:
+        old = json.load(open(cache))["rate_limits"]
+    except (OSError, ValueError, KeyError):
+        old = {}
+    for name, new in limits.items():
+        was = old.get(name) or {}
+        if isinstance(new, dict) and was.get("resets_at") == new.get("resets_at") and was.get("used_percentage", 0) > new.get("used_percentage", 0):
+            limits[name] = was
     with open(cache, "w") as f:
         json.dump({"saved_at": time.time(), "rate_limits": limits}, f)
 
