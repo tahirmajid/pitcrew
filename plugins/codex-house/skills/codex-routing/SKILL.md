@@ -34,6 +34,10 @@ Before each batch run `python3 -I <this skill's directory>/usage-balance.py` and
 
 "Codex unknown": run one small runner job, then check again. "Claude unknown": the status line hasn't cached the limits yet (setup below); the verdict falls back to `normal`.
 
+## Enforcement
+
+A hook checks the verdict before every Agent call. Under `orchestrate` (or `codex-all` from a custom script) it refuses Claude subagents other than reviewers. Under a `50-50` verdict it refuses a Claude subagent once the session has started two more Claude jobs than Codex jobs. For a job on the "never Codex" list, put a line `claude-only: <reason>` in the prompt. `CODEX_HOUSE_USAGE_SCRIPT` points the hook at a different verdict script.
+
 ## Setup for the Claude numbers
 
 Claude Code gives rate limits only to the status line. `statusline-limits.py` in this directory shows them and caches them in `~/.claude/claude-limits.json`, which the script reads. Use it as your status line (`"statusLine": {"type": "command", "command": "python3 -I <path>/statusline-limits.py"}`), or have your own status line write the same file: `{"saved_at": <epoch>, "rate_limits": <the status line's rate_limits>}`.

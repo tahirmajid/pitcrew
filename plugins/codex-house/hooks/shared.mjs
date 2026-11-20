@@ -50,3 +50,14 @@ export const saveSpawnHead = (cwd, head) => writeFileSync(headFile(cwd), head)
 export const spawnHead = cwd => {
   try { return readFileSync(headFile(cwd), 'utf8').trim() || undefined } catch { return undefined }
 }
+
+/** Returns how many Claude and Codex jobs the session has started. */
+export const spawnCounts = sessionId => {
+  try { return { claude: 0, codex: 0, ...JSON.parse(readFileSync(stateFile(sessionId, 'spawns'), 'utf8')) } } catch { return { claude: 0, codex: 0 } }
+}
+
+/** Adds one job of kind ('claude' or 'codex') to the session's count. */
+export const countSpawn = (sessionId, kind) => {
+  const counts = spawnCounts(sessionId)
+  writeFileSync(stateFile(sessionId, 'spawns'), JSON.stringify({ ...counts, [kind]: counts[kind] + 1 }))
+}

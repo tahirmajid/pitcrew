@@ -18,7 +18,7 @@ Pick a model, then put the role's header lines at the top of the prompt.
 | runner | `codex:luna` | (defaults) | no judgement: command, grep, exact patch, rename |
 | rescuer | `codex:sol` | (defaults) | stuck task or a second diagnosis |
 
-`codex:astra` / `codex:terra` only when the user asks. Add `effort: low|medium|high|xhigh` when the default doesn't fit. Every Agent call needs a unique `name` (e.g. `fix-login-null`); the spawn is refused without one.
+`codex:astra` / `codex:terra` only when the user asks. Add `effort: low|medium|high|xhigh` when the default doesn't fit. Every Agent call needs a unique `name` (e.g. `fix-login-null`); the spawn is refused without one. Pass `name` even when the Agent tool's schema doesn't list it, and when a spawn is refused for a missing name, retry with one instead of switching to a Claude subagent.
 
 ## Limits (guidance, not enforced)
 

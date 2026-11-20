@@ -35,6 +35,12 @@ House rules for handing work to OpenAI Codex from Claude Code. It runs on [SSS13
 
 - **Skill `codex-routing`:** which work goes to Codex and which stays with Claude, by Claude's weekly use: under 60% Codex does review, second diagnosis and legwork; from 60% implementation too; from 75% most of the work, with Claude orchestrating and verifying. `usage-balance.py` prints the current tier; `statusline-limits.py` gives it Claude's numbers.
 - **Skill `delegate-to-codex`:** role presets (implementer, reviewer, runner, rescuer) as header lines on `codex:sol` / `codex:luna`, a `.handoff/<job>.md` brief template, the `## Result` format, how to verify and commit, and what to do when Codex fails.
+- **A hook that routes spawns.** Before every Agent call it reads the usage verdict and refuses:
+  - a `codex:*` spawn with no `name`, with a message to add one and retry;
+  - a Claude subagent while the verdict is `orchestrate` or `codex-all`, unless it is a reviewer;
+  - a Claude subagent under a `50-50` verdict once the session has started two more Claude jobs than Codex jobs.
+
+  A line `claude-only: <reason>` in the prompt lets a job through that Codex can't do. Set `CODEX_HOUSE_USAGE_SCRIPT` to your own verdict script to route by your own tiers. If the hook itself fails, the spawn goes through.
 - **Hooks that warn, never block:**
   - at session start, a warning when another plugin named `codex` is installed, or the Codex CLI is missing or logged out;
   - before a `codex:*` spawn, `.handoff/` is added to the repo's `info/exclude`;
